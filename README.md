@@ -6,3 +6,4 @@ Technologies Used:
 Node Packages: 
  - react-native-progress
  - react-native-vector-icons
+ - @react-native-firebase

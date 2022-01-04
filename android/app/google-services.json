@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "539734524012",
+    "project_id": "learngerman-e464e",
+    "storage_bucket": "learngerman-e464e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:539734524012:android:76f56583ca3f9486759849",
+        "android_client_info": {
+          "package_name": "com.learngerman"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "539734524012-tgdevjbmnha9ib3to0oo79eiscgptr1f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfrLGqUrT58U3vVLtKK2V_Bp5qXzwFdJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "539734524012-tgdevjbmnha9ib3to0oo79eiscgptr1f.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -8,29 +8,63 @@
  * @format
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   SafeAreaView,
   StyleSheet,
   Text,
   View,
-  TouchableOpacity
+  TouchableOpacity,
+  Animated,
+  ImageBackground
 } from 'react-native';
-import * as Progress from 'react-native-progress';
 import Icon from 'react-native-vector-icons/Ionicons';
+
+import database from '@react-native-firebase/database';
+import { firebase } from '@react-native-firebase/database';
 
 const App = () => {
 
-  const [chosenWord, setChosenWord] = useState<null | string>(null);
+  const [isBusy, setIsBusy] = useState<boolean>(true);
+
+
+
+  const [wordList, setWordList] = useState<any[]>([]);
+  const [mistakeWordList, setMistakeWordList] = useState<any[]>([]);
+
+  const [currIdx, setCurrIdx] = useState<number>(0);
+
+  const [chosenWord, setChosenWord] = useState<string | null>(null);
   const [isWordChosen, setIsWordChosen] = useState<boolean>(false);
+  const [nextSentance, setNextSentance] = useState<boolean>(false);
+  const [didArraysChange, setDidArraysChange] = useState<boolean>(false);
+
+  const [victory, setVictory] = useState<boolean>(false);
+  const [progressCount, setProgressCount] = useState(0);
 
   const [resultContainerColor, setResultContainerColor] = useState<{backgroundColor: string} | null>(null);
   const [answerContainerDisplay, setAnswerContainerDisplay] = useState<{display: string} | null>(null);
   const [continueButtonColor, setContinueButtonColor] = useState<{color: string} | null>(null);
   const [continueButtonContainerColor, setContinueButtonContainerColor] = useState<{backgroundColor: string} | null>(null);
 
+  useEffect(() => {
+    setIsBusy(true);
+
+    const reference = firebase
+    .app()
+    .database('https://learngerman-e464e-default-rtdb.europe-west1.firebasedatabase.app/')
+    .ref('/sentances');
+
+
+    reference.once('value')
+    .then(snapshot => {
+      setWordList(snapshot.val());
+      setIsBusy(false);
+    });
+    
+  }, [])
+
   const chooseWord = (word : string) =>{
-    console.log(word);
 
     setChosenWord(word);
     setIsWordChosen(true);
@@ -48,61 +82,126 @@ const App = () => {
   }
 
   const checkWord = (word : string | null) =>{
-    console.log(word);
+
+    if(nextSentance === true){
+      setProgressCount(((currIdx / wordList.length)*100)+10);
+      if(progressCount === 90){
+        setProgressCount(0)
+      }
+      if(currIdx === 0){
+        setProgressCount(((1 / wordList.length)*100));
+      }
+
+      setNextSentance(false);
+      setChosenWord(null);
+      setIsWordChosen(false);
+
+      if(didArraysChange){
+        setWordList(mistakeWordList)
+        setCurrIdx(0);
+      }else{
+        setCurrIdx(currIdx+1);
+      }
+
+      setResultContainerColor({backgroundColor: 'rgba(39, 60, 117, 0.0)' });
+      setAnswerContainerDisplay({display: 'none'});
+      setContinueButtonColor({color: 'grey'})
+      setContinueButtonContainerColor({backgroundColor: 'white'});
+
+      if(wordList[currIdx+1] === undefined && mistakeWordList.length === 0){
+        console.log("Congratulations!");
+        setProgressCount(100);
+        setVictory(true)
+      }
+      return;
+    }
 
 
-    if(word === 'Hause'){
-      console.log("Correct!")
+
+    if(word === wordList[currIdx].correctWord){
       setResultContainerColor({backgroundColor: '#2bcbba' });
       setAnswerContainerDisplay({display: 'flex'});
       setContinueButtonColor({color: '#2bcbba'})
       setContinueButtonContainerColor({backgroundColor: 'white'});
+
+      if(mistakeWordList.length > 0){
+        const newMistakeWordList = mistakeWordList.filter(sentance => sentance.correctWord !== word);
+        setMistakeWordList(newMistakeWordList);
+      }
+      setNextSentance(true);
+      setDidArraysChange(false);
     }else{
-      console.log("False !");
       setResultContainerColor({backgroundColor: '#fc5c65' });
       setAnswerContainerDisplay({display: 'flex'});
       setContinueButtonColor({color: '#fc5c65'})
       setContinueButtonContainerColor({backgroundColor: 'white'});
+
+      setMistakeWordList((mistakeWordList) =>[...mistakeWordList, wordList[currIdx]]) 
+      setNextSentance(true);
+      setDidArraysChange(false);
     }
 
+    if(wordList[currIdx+1] === undefined){
+      if(mistakeWordList.length > 0){
+        setDidArraysChange(true);
+      }
+    }
+    
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Icon name="chevron-back" size={30} color="#900" />
-        <Progress.Bar progress={0.3} width={250} height={10}/>
-      </View>
-      <View style={styles.body}>
-        <Text style={styles.instructionText}>Fill in the missing word</Text>
-        <Text style={styles.englishSentance}>The <Text style={styles.higlightedEnglish}>house</Text> is small</Text>
-        <View style={styles.germanSentance}>
-          <Text style={styles.regularWord}>Das</Text>
-          <Text style={isWordChosen ? styles.missingWord : styles.regularWord} onPress={() => removeWord()}>{isWordChosen ? chosenWord : '____'}</Text>
-          <Text style={styles.regularWord}>ist</Text>
-          <Text style={styles.regularWord}>klein.</Text>
-        </View>
-        <View style={styles.wordContainer}>
-          <Text style={chosenWord === 'folgen' ? styles.chooseWordHide : styles.chooseWord} onPress={() => chooseWord('folgen')}>folgen</Text>
-          <Text style={chosenWord === 'Schaf' ? styles.chooseWordHide : styles.chooseWord} onPress={() => chooseWord('Schaf')}>Schaf</Text>
-          <Text style={chosenWord === 'Bereiden' ? styles.chooseWordHide : styles.chooseWord} onPress={() => chooseWord('Bereiden')}>Bereiden</Text>
-          <Text style={chosenWord === 'Hause' ? styles.chooseWordHide : styles.chooseWord} onPress={() => chooseWord('Hause')}>Hause</Text>
-        </View>
-        <View style={[styles.result, resultContainerColor]}>
-          <View style={[styles.answerContainer, answerContainerDisplay]}>
-            <Text style={styles.answerText}>Answer: <Text style={styles.answerWord}>House</Text></Text>
-            <Icon name="flag" size={10} color="#fff" />
+      <ImageBackground source={require('./assets/images/bg-image.jpg')} resizeMode="cover" style={styles.image}>
+        <View style={styles.header}>
+          <Icon name="chevron-back" size={30} color="#fff" />
+          <View style={styles.progressBar}>
+            <Animated.View style={[StyleSheet.absoluteFill, {backgroundColor: "#2bcbba", width: `${progressCount}%`, borderRadius: 20}]}/>
           </View>
-          <TouchableOpacity style={[styles.answerButton, continueButtonContainerColor]} onPress={() => checkWord(chosenWord)}><Text style={[styles.continueButton, continueButtonColor]}>CONTINUE</Text></TouchableOpacity>
         </View>
-      </View>
+        <View style={styles.body}>
+
+          {victory ? <Text>Congratulations! Game over.</Text> :
+          <>
+            <Text style={styles.instructionText}>Fill in the missing word</Text>
+            {isBusy ? <Text>Loading..</Text> : 
+              <>
+                <Text style={styles.englishSentance}>{wordList[currIdx].englishSentance.split(" ").map((text, index) => {
+                  return text === wordList[currIdx].correctWordEnglish ? <Text style={styles.higlightedEnglish} key={index}>{text} </Text> : <Text key={index}>{text} </Text>
+                })}</Text>
+                <View style={styles.germanSentance}>
+                  {wordList[currIdx].germanSentance.split(" ").map((text, index) => {
+                    return text === wordList[currIdx].correctWord ? <Text style={isWordChosen ? styles.missingWord : styles.regularWord} key={index} onPress={() => removeWord()}>{isWordChosen ? chosenWord : '____'}</Text> : <Text key={index} style={styles.regularWord}>{text}</Text>
+                  })}
+                </View>
+                <View style={styles.wordContainer}>
+                  {wordList[currIdx].otherWords.split(", ").map((word, index) =>{
+                    return <Text style={chosenWord === word ? styles.chooseWordHide : styles.chooseWord} onPress={() => chooseWord(word)} key={index}>{word}</Text>
+                  })}
+                </View>
+                <View style={[styles.result, resultContainerColor]}>
+                  <View style={[styles.answerContainer, answerContainerDisplay]}>
+                    <Text style={styles.answerText}>Answer: <Text style={styles.answerWord}>{wordList[currIdx].correctWord}</Text></Text>
+                    <Icon name="flag" size={10} color="#fff" />
+                  </View>
+                  <TouchableOpacity style={[styles.answerButton, continueButtonContainerColor]} onPress={() => checkWord(chosenWord)}><Text style={[styles.continueButton, continueButtonColor]}>CONTINUE</Text></TouchableOpacity>
+                </View>
+              </>
+            }
+          </>
+          }
+        </View>
+      </ImageBackground>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container:{
-    flex: 1
+    flex: 1,
+  },
+  image:{
+    flex: 1,
+    justifyContent: "center"
   },
   header:{
     display: 'flex',
@@ -110,12 +209,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     marginVertical: 30,
+    background: 'transparent'
+  },
+  progressBar:{
+    height: 25,
+    flexDirection: "row",
+    width: '70%',
+    backgroundColor: 'rgba(39, 60, 117, 1)',
+    borderColor: 'rgba(39, 60, 117, 1)',
+    borderWidth: 7,
+    borderRadius: 20
   },
   body:{
     paddingTop: 20,
     borderTopRightRadius: 20,
     borderTopLeftRadius: 20,
-    backgroundColor: '#273c75',
+    backgroundColor: 'rgba(39, 60, 117, 0.7)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
